@@ -7,7 +7,6 @@ from enum import IntEnum
 from datetime import datetime
 from sys import argv
 
-
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
 URL_LOGIN = 'http://bkjw.guet.edu.cn/student/public/login.asp'
 URL_SELECT_COURSE = 'http://bkjw.guet.edu.cn/student/select.asp'
@@ -44,6 +43,7 @@ def retry_wrapper(func):
                 failed_times += 1
                 timeout <<= 1
                 continue
+
     return wrapper
 
 
@@ -64,12 +64,17 @@ def login(usn, pwd):
 def select_course(session, select_type, course):
     course = str(course)
     assert course.isdigit() and len(course) == 7, 'course无效!'
+
+    """
+    requests.post()，使用dict作为data时，遇到非ascii码时，实践发现使用了两次url编码，
+    (比如将'登　录'变成'%B5%C7%A1%A1%C2%BC'(gbk编码)，然后再将'%'编码成%25，变成'%25B5%25C7%25A1%25A1%25C2%25BC')，
+    如果不需要转义，则要使用str类型的data，并且修改header，将Content-Type设置为：application/x-www-form-urlencoded。
+    """
     data = {
         'selecttype': select_type,
         'course': course,
         'textbook{}'.format(course): 0,
-        'lwBtnselect': '%CC%E1%BD%BB'  # request只使用utf8编码，但教务系统使用的是gbk，所以才写成这样。
-        # 并且转成str，这样requests库不会对百分号转义（需要添加Content-Type）
+        'lwBtnselect': '%CC%E1%BD%BB'
     }
     str_data = '&'.join('%s=%s' % (k, v) for k, v in data.items())
     r = session.post(URL_SELECT_COURSE, data=str_data,
