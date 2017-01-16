@@ -95,6 +95,7 @@ def select_course(session, select_type, course):
     elif r.status_code == 200 and content_length == 256:
         return RtnSelectCourse.FULL
     else:
+        print('response: status_code:', r.status_code, 'content-length', content_length)
         return RtnSelectCourse.UNKNOWN
 
 
@@ -109,16 +110,23 @@ def start(username, password, select_type, courses, interval):
         for i, result in enumerate(results):
             print(params[i][2], ':', result, end='. ')
         print()
+
+        selected_courses = []
         for i, result in enumerate(results):
             # 删除成功课程
             if result > 0:
-                print(str(datetime.now())[:-7], 'course select succeed:', params[i][2])
-                del params[i]
+                course = params[i][2]
+                print(str(datetime.now())[:-7], 'course select succeed:', course)
+                selected_courses.append(course)
             # 登录超时重新登录
             elif result == RtnSelectCourse.LOGIN_EXPIRED or result == RtnSelectCourse.UNKNOWN:
                 session = login(username, password)
                 params = [(session, select_type, param[2]) for param in params]
+        params = list(filter(lambda param: param[2] not in selected_courses, params))
+        if len(params) == 0:
+            break
         sleep(interval)
+    print('==============all done.==============')
     pool.close()
     pool.join()
 
